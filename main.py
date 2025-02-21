@@ -145,7 +145,7 @@ record_output(
     ELEMENT_ACC,
     TRAINING_TIME,
     TESTING_TIME,
-    f"{PWD}/DBDA/records/log/{net.name}_{day_str}_{Dataset}"
+    f"{PWD}/records/log/{net.name}_{day_str}_{Dataset}"
     f"_split{VALIDATION_SPLIT}_lr{lr}.txt",
 )
 generate_png(all_iter, net, gt_hsi, Dataset, device, total_indices)
