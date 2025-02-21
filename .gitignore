@@ -1,0 +1,14 @@
+__pycache__
+
+datasets/*
+!datasets/datasets_export_here
+
+pth/*
+!pth/pth_stay_here
+
+records/figures/*
+records/log/*
+records/models/*
+!records/figures/figure
+!records/log/log
+!records/models/early
