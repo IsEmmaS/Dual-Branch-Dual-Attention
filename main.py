@@ -3,7 +3,7 @@ import time
 import collections
 import torch
 import datetime
-import logging
+import argparse
 
 from sklearn import metrics, preprocessing
 from torch import optim
@@ -23,15 +23,16 @@ PWD = Path(__file__).resolve().parent
 IMAGE_FOLDER = f"{PWD}/records/figures"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+parser=argparse.ArgumentParser(description="DBDA Network Training Script")
+parser.add_argument("dataset", type=str, help="Dataset name (IN, UP, BS, SV, PC, DN, DN_1, WHL, HC, HH, KSC)")
+args = parser.parse_args()
 
 seeds = [1331, 1332, 1333, 1334, 1335, 1336, 1337, 1338, 1339, 1340, 1341]
 
 day_str = datetime.datetime.now().strftime("%m_%d_%H_%M")
 
 
-global Dataset
-dataset_str = input("Dataset(IN, UP, BS, SV, PC, DN, DN_1, WHL, HC, HH or KSC):")
+dataset_str = args.dataset.upper()
 Dataset = dataset_str.upper()
 data_hsi, gt_hsi, TOTAL_SIZE, TRAIN_SIZE, VALIDATION_SPLIT = load_dataset(Dataset)
 print(data_hsi.shape)
