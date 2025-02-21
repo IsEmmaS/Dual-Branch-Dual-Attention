@@ -43,7 +43,7 @@ gt = gt_hsi.reshape(np.prod(gt_hsi.shape[:2]))
 CLASSES_NUM = max(gt)
 print("The class numbers of the HSI data is:", CLASSES_NUM)
 print("Importing Setting Parameters")
-ITER = 1
+ITER = 10
 PATCH_LENGTH = 4
 lr, num_epochs, batch_size = 0.0005, 200, 16
 loss = torch.nn.CrossEntropyLoss()
