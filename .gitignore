@@ -4,6 +4,8 @@ datasets/*
 !datasets/datasets_export_here
 
 pth/*
+classification_maps/*
+!classification_maps/classification_maps_here
 !pth/pth_stay_here
 
 records/figures/*

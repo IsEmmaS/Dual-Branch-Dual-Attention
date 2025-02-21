@@ -75,7 +75,7 @@ def train(net, train_iter, valida_iter, loss, optimizer, device, datasets, image
             if valida_loss_list[-1] > min(valida_loss_list):
                 early_epoch += 1
                 if early_epoch == early_num:
-                    net.load_state_dict(torch.load(model_path))
+                    net.load_state_dict(torch.load(model_path,  weights_only=True))
                     break
             else:
                 early_epoch = 0
