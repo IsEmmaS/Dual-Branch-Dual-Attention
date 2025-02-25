@@ -3,9 +3,6 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython import display
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 def set_figsize(figsize=(3.5, 2.5)):
     use_svg_display()
@@ -32,7 +29,7 @@ def train(net, train_iter, valida_iter, loss, optimizer, device, datasets, image
     
     early_epoch = 0
     net.to(device)
-    logging.info(f'Training on {device}')
+    print(f"Training on {device}")
     start = time.time()
     
     train_loss_list = []
@@ -68,14 +65,15 @@ def train(net, train_iter, valida_iter, loss, optimizer, device, datasets, image
         valida_loss_list.append(valida_loss)
         valida_acc_list.append(valida_acc)
         
-        logging.info(f'Epoch {epoch + 1}, Train Loss: {train_l_sum / total_batches:.6f}, Train Acc: {train_acc_sum / len(train_iter.dataset):.3f}, '
-                     f'Valida Loss: {valida_loss:.6f}, Valida Acc: {valida_acc:.3f}')
+        print(f"Epoch {epoch + 1}, Train Loss: {train_l_sum / total_batches:.6f}, Train Acc: {train_acc_sum / len(train_iter.dataset):.3f}, "
+              f"Valida Loss: {valida_loss:.6f}, Valida Acc: {valida_acc:.3f}")
         
         if early_stopping:
             if valida_loss_list[-1] > min(valida_loss_list):
                 early_epoch += 1
                 if early_epoch == early_num:
-                    net.load_state_dict(torch.load(model_path,  weights_only=True))
+                    net.load_state_dict(torch.load(model_path, map_location=device))
+                    print(f"Early stopping triggered at epoch {epoch + 1}")
                     break
             else:
                 early_epoch = 0
@@ -108,5 +106,5 @@ def train(net, train_iter, valida_iter, loss, optimizer, device, datasets, image
     
     date = time.strftime('%Y-%m-%d-%H:%M', time.localtime())
     plt.savefig(f'{image_path}/{iter_index}-{datasets}-{date}.png')
-    logging.info(f'Epoch {epoch + 1}, Final Train Acc: {train_acc_list[-1]:.3f}, Final Valida Acc: {valida_acc_list[-1]:.3f}, '
-                 f'Figures saved at {image_path}')
+    print(f"Epoch {epoch + 1}, Final Train Acc: {train_acc_list[-1]:.3f}, Final Valida Acc: {valida_acc_list[-1]:.3f}, "
+          f"Figures saved at {image_path}")
