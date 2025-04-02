@@ -69,37 +69,37 @@ padded_data = np.lib.pad(
     "constant",
     constant_values=0,
 )
+net = DBDA_network_MISH(BAND, CLASSES_NUM)
+optimizer = optim.Adam(net.parameters(), lr=lr, amsgrad=False)
+time_1 = int(time.time())
+train_indices, test_indices = sampling(VALIDATION_SPLIT, gt)
+_, total_indices = sampling(1, gt)
+TRAIN_SIZE = len(train_indices)
+print("Train size: ", TRAIN_SIZE)
+TEST_SIZE = TOTAL_SIZE - TRAIN_SIZE
+print("Test size: ", TEST_SIZE)
+VAL_SIZE = int(TRAIN_SIZE)
+print("Validation size: ", VAL_SIZE)
+print("Selecting Small Pieces from the Original Cube Data")
+train_iter, valida_iter, test_iter, all_iter = generate_iter(
+    TRAIN_SIZE,
+    train_indices,
+    TEST_SIZE,
+    test_indices,
+    TOTAL_SIZE,
+    total_indices,
+    VAL_SIZE,
+    whole_data,
+    PATCH_LENGTH,
+    padded_data,
+    INPUT_DIMENSION,
+    batch_size,
+    gt,
+)
 for index_iter in range(ITER):
     torch.cuda.empty_cache()
-    print("iter:", index_iter)
-    net = DBDA_network_MISH(BAND, CLASSES_NUM)
-    optimizer = optim.Adam(net.parameters(), lr=lr, amsgrad=False)
-    time_1 = int(time.time())
     np.random.seed(seeds[index_iter])
-    train_indices, test_indices = sampling(VALIDATION_SPLIT, gt)
-    _, total_indices = sampling(1, gt)
-    TRAIN_SIZE = len(train_indices)
-    print("Train size: ", TRAIN_SIZE)
-    TEST_SIZE = TOTAL_SIZE - TRAIN_SIZE
-    print("Test size: ", TEST_SIZE)
-    VAL_SIZE = int(TRAIN_SIZE)
-    print("Validation size: ", VAL_SIZE)
-    print("Selecting Small Pieces from the Original Cube Data")
-    train_iter, valida_iter, test_iter, all_iter = generate_iter(
-        TRAIN_SIZE,
-        train_indices,
-        TEST_SIZE,
-        test_indices,
-        TOTAL_SIZE,
-        total_indices,
-        VAL_SIZE,
-        whole_data,
-        PATCH_LENGTH,
-        padded_data,
-        INPUT_DIMENSION,
-        batch_size,
-        gt,
-    )
+    print("iter:", index_iter)
     tic1 = time.perf_counter()
     train(
         net,
