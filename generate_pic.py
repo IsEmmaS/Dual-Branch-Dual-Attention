@@ -355,16 +355,16 @@ def generate_iter(
     gt_all_tensor = torch.from_numpy(gt_all).long()
     
     # 创建数据集
-    train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-    val_dataset = TensorDataset(x_val_tensor, y_val_tensor)
-    test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
-    all_dataset = TensorDataset(all_data_tensor, gt_all_tensor)
+    train_dataset = Data.TensorDataset(x_train_tensor, y_train_tensor)
+    val_dataset = Data.TensorDataset(x_val_tensor, y_val_tensor)
+    test_dataset = Data.TensorDataset(x_test_tensor, y_test_tensor)
+    all_dataset = Data.TensorDataset(all_data_tensor, gt_all_tensor)
     
     # 创建 DataLoader
-    train_iter = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_iter = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    test_iter = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-    all_iter = DataLoader(all_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    train_iter = Data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_iter = Data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    test_iter =Data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    all_iter = Data.DataLoader(all_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
     
     return train_iter, val_iter, test_iter, all_iter
 
