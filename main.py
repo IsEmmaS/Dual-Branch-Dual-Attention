@@ -70,6 +70,7 @@ padded_data = np.lib.pad(
     constant_values=0,
 )
 for index_iter in range(ITER):
+    torch.cuda.empty_cache()
     print("iter:", index_iter)
     net = DBDA_network_MISH(BAND, CLASSES_NUM)
     optimizer = optim.Adam(net.parameters(), lr=lr, amsgrad=False)

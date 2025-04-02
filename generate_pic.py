@@ -210,28 +210,27 @@ def sampling(proportion, ground_truth):
         train_indexes (list): 训练集的索引列表。
         test_indexes (list): 测试集的索引列表。
     """
-    # 获取每个类别的索引
-    labels = np.unique(ground_truth)
-    labels_loc = {label: np.argwhere(ground_truth == label).flatten() for label in labels}
-
-    # 初始化训练集和测试集的索引
-    train_indexes = []
-    test_indexes = []
-
-    for label in labels:
-        indexes = labels_loc[label]
+    train = {}
+    test = {}
+    labels_loc = {}
+    m = max(ground_truth)
+    for i in range(m):
+        indexes = [j for j, x in enumerate(ground_truth.ravel().tolist()) if x == i + 1]
         np.random.shuffle(indexes)
+        labels_loc[i] = indexes
         if proportion != 1:
             nb_val = max(int((1 - proportion) * len(indexes)), 3)
         else:
             nb_val = 0
-        train_indexes.extend(indexes[:nb_val])
-        test_indexes.extend(indexes[nb_val:])
-
-    # 打乱
+        train[i] = indexes[:nb_val]
+        test[i] = indexes[nb_val:]
+    train_indexes = []
+    test_indexes = []
+    for i in range(m):
+        train_indexes += train[i]
+        test_indexes += test[i]
     np.random.shuffle(train_indexes)
     np.random.shuffle(test_indexes)
-
     return train_indexes, test_indexes
 
 
