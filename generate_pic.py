@@ -1,18 +1,63 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from operator import truediv
 import scipy.io as sio
 import torch
 import math
-from extract_small_cubic import select_small_cubic
 import torch.utils.data as Data
 import time
 from pathlib import Path
 
 PWD = Path(__file__).resolve().parent
 
+def select_small_cubic(
+    data_size, data_indices, whole_data, patch_length, padded_data, dimension
+):
+    """
+    根据给定的数据索引从填充后的数据中提取小立方体块。
 
-def load_dataset(Dataset):
+    该函数接收数据大小、数据索引、原始数据、块长度、填充后的数据和数据维度作为输入。
+    首先，它将数据索引分配到填充后数据中对应的行和列位置。
+    然后，它遍历每个数据索引，使用切片操作提取以分配位置为中心的小立方体块，
+    并将这些块存储在 small_cubic_data 数组中。
+
+    参数：
+        data_size (int): 要提取块的数据点数量。
+        data_indices (numpy.ndarray): 数据点在原始数据中的索引。
+        whole_data (numpy.ndarray): 未填充的原始数据。
+        patch_length (int): 要提取的块的长度。
+        padded_data (numpy.ndarray): 填充后的数据。
+        dimension (int): 数据的维度数。
+
+    返回值：
+        small_cubic_data (numpy.ndarray): 一个 4D 数组，包含提取的小立方体块。
+            数组的形状为 (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension)。
+    """
+    rows, cols = whole_data.shape[:2]
+    small_cubic_data = np.zeros(
+        (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension),
+        dtype=padded_data.dtype,
+    )
+
+    # 计算每个索引对应的行和列
+    data_indices = np.array(data_indices)
+    row_indices = (data_indices // cols).astype(int) + patch_length
+    col_indices = (data_indices % cols).astype(int) + patch_length
+
+    # 使用Numpy的索引网络、广播机制进行优化
+    row_indices = row_indices[:, np.newaxis, np.newaxis]
+    col_indices = col_indices[:, np.newaxis, np.newaxis]
+    row_range = np.arange(-patch_length, patch_length + 1)
+    col_range = np.arange(-patch_length, patch_length + 1)
+    row_grid = row_indices + row_range
+    col_grid = col_indices + col_range
+    small_cubic_data = padded_data[row_grid, col_grid, :]
+
+    return small_cubic_data
+
+
+
+
+def load_dataset(Dataset:str):
     """
     根据数据集名称加载高光谱数据集。
 
@@ -115,8 +160,12 @@ def load_dataset(Dataset):
     if Dataset not in _dataset_info:
         raise ValueError(f"Invalid dataset name: {Dataset}")
     info = _dataset_info[Dataset]
+    
+    # scipy.io 读数据
     data_hsi = sio.loadmat(info["data_path"])[info["data_key"]]
     gt_hsi = sio.loadmat(info["gt_path"])[info["gt_key"]]
+    
+    # 简单分割
     TOTAL_SIZE = info["TOTAL_SIZE"]
     VALIDATION_SPLIT = info["VALIDATION_SPLIT"]
     TRAIN_SIZE = math.ceil(TOTAL_SIZE * VALIDATION_SPLIT)
@@ -135,10 +184,6 @@ def save_cmap(img, cmap, fname):
 
     返回:
         None
-     示例:
-        >>> import numpy as np
-        >>> img = np.random.rand(100, 100)
-        >>> save_cmap(img, 'viridis', 'example.png')
     """
     sizes = np.shape(img)
     height = float(sizes[0])
@@ -154,34 +199,56 @@ def save_cmap(img, cmap, fname):
 
 
 def sampling(proportion, ground_truth):
-    train = {}
-    test = {}
-    labels_loc = {}
-    m = max(ground_truth)
-    for i in range(m):
-        indexes = [j for j, x in enumerate(ground_truth.ravel().tolist()) if x == i + 1]
+    """
+    根据给定的比例对数据集进行采样，生成训练集和测试集的索引。
+
+    参数：
+        proportion (float): 训练集的比例（0 到 1 之间）。
+        ground_truth (numpy.ndarray): 地面真实标签的二维数组。
+
+    返回值：
+        train_indexes (list): 训练集的索引列表。
+        test_indexes (list): 测试集的索引列表。
+    """
+    # 获取每个类别的索引
+    labels = np.unique(ground_truth)
+    labels_loc = {label: np.argwhere(ground_truth == label).flatten() for label in labels}
+
+    # 初始化训练集和测试集的索引
+    train_indexes = []
+    test_indexes = []
+
+    for label in labels:
+        indexes = labels_loc[label]
         np.random.shuffle(indexes)
-        labels_loc[i] = indexes
         if proportion != 1:
             nb_val = max(int((1 - proportion) * len(indexes)), 3)
         else:
             nb_val = 0
-        train[i] = indexes[:nb_val]
-        test[i] = indexes[nb_val:]
-    train_indexes = []
-    test_indexes = []
-    for i in range(m):
-        train_indexes += train[i]
-        test_indexes += test[i]
+        train_indexes.extend(indexes[:nb_val])
+        test_indexes.extend(indexes[nb_val:])
+
+    # 打乱
     np.random.shuffle(train_indexes)
     np.random.shuffle(test_indexes)
+
     return train_indexes, test_indexes
 
 
 def aa_and_each_accuracy(confusion_matrix):
+    """计算每个类别的准确率和平均准确率。
+
+    Args:
+        confusion_matrix (np.ndarray): 混淆矩阵NxN
+
+    Returns:
+        each_acc(np.ndarray): 各类的准确
+        average_acc(float): 平均准确率
+    """
     list_diag = np.diag(confusion_matrix)
-    list_raw_sum = np.sum(confusion_matrix, axis=1)
-    each_acc = np.nan_to_num(truediv(list_diag, list_raw_sum))
+    N = np.sum(confusion_matrix, axis=1)
+    
+    each_acc = np.nan_to_num(list_diag / N)
     average_acc = np.mean(each_acc)
     return each_acc, average_acc
 
