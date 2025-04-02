@@ -2,14 +2,9 @@ import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from IPython import display
 
 def set_figsize(figsize=(3.5, 2.5)):
-    use_svg_display()
     plt.rcParams['figure.figsize'] = figsize
-
-def use_svg_display():
-    display.set_matplotlib_formats('svg')
 
 def evaluate_accuracy(data_iter, net, loss, device):
     acc_sum, n = 0.0, 0

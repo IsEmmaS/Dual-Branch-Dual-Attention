@@ -55,8 +55,8 @@ ALL_SIZE = data_hsi.shape[0] * data_hsi.shape[1]
 VAL_SIZE = int(TRAIN_SIZE)
 TEST_SIZE = TOTAL_SIZE - TRAIN_SIZE
 KAPPA = []
-OA = []
-AA = []
+overall_acc_list = []
+average_acc_list = []
 TRAINING_TIME = []
 TESTING_TIME = []
 ELEMENT_ACC = np.zeros((ITER, CLASSES_NUM))
@@ -132,15 +132,15 @@ for index_iter in range(ITER):
     kappa = metrics.cohen_kappa_score(pred_test_fdssc, gt_test[:-VAL_SIZE])
     torch.save(net.state_dict(), f"{PWD}/pth/{str(round(overall_acc_fdssc, 3))}.pt")
     KAPPA.append(kappa)
-    OA.append(overall_acc_fdssc)
-    AA.append(average_acc_fdssc)
+    overall_acc_list.append(overall_acc_fdssc)
+    average_acc_list.append(average_acc_fdssc)
     TRAINING_TIME.append(toc1 - tic1)
     TESTING_TIME.append(toc2 - tic2)
     ELEMENT_ACC[(index_iter), :] = each_acc_fdssc
 print(f"{net.name}  Training Finished")
 record_output(
-    OA,
-    AA,
+    overall_acc_list,
+    average_acc_list,
     KAPPA,
     ELEMENT_ACC,
     TRAINING_TIME,

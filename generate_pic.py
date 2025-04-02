@@ -4,7 +4,7 @@ from operator import truediv
 import scipy.io as sio
 import torch
 import math
-import extract_small_cubic
+from extract_small_cubic import select_small_cubic
 import torch.utils.data as Data
 import time
 from pathlib import Path
@@ -306,29 +306,14 @@ def generate_iter(
 
     Raises:
         ValueError: 如果输入参数的类型或形状不正确。
-
-    Example:
-        >>> train_iter, valiada_iter, test_iter, all_iter = generate_iter(
-        ...     TRAIN_SIZE=100, train_indices=np.array([1, 2, 3]), TEST_SIZE=50, test_indices=np.array([4, 5, 6]),
-        ...     TOTAL_SIZE=150, total_indices=np.array([1, 2, 3, 4, 5, 6]), VAL_SIZE=20,
-        ...     whole_data=np.random.rand(150, 10, 10), PATCH_LENGTH=2, padded_data=np.random.rand(154, 10, 10),
-        ...     INPUT_DIMENSION=10, batch_size=10, gt=np.array([1, 2, 3, 4, 5, 6])
-        ... )
-        >>> print(train_iter)
-        <torch.utils.data.dataloader.DataLoader object at 0x...>
-
-    Note:
-        该函数假设输入的 `train_indices`、`test_indices` 和 `total_indices` 是一维的 numpy 数组。
-        该函数使用 `extract_small_cubic.select_small_cubic` 函数提取数据，确保该函数已正确实现。
-
-    See Also:
-        extract_small_cubic.select_small_cubic: 用于提取小立方体数据的函数。
-        torch.utils.data.DataLoader: 用于创建数据加载器的类。
     """
+    # 提取标签
     gt_all = gt[total_indices] - 1
     y_train = gt[train_indices] - 1
     y_test = gt[test_indices] - 1
-    all_data = extract_small_cubic.select_small_cubic(
+    
+    # 提取所有需要的数据
+    all_data = select_small_cubic(
         TOTAL_SIZE,
         total_indices,
         whole_data,
@@ -336,7 +321,9 @@ def generate_iter(
         padded_data,
         INPUT_DIMENSION,
     )
-    train_data = extract_small_cubic.select_small_cubic(
+
+    # 根据索引分割数据
+    train_data = select_small_cubic(
         TRAIN_SIZE,
         train_indices,
         whole_data,
@@ -344,47 +331,42 @@ def generate_iter(
         padded_data,
         INPUT_DIMENSION,
     )
-    test_data = extract_small_cubic.select_small_cubic(
+    test_data = select_small_cubic(
         TEST_SIZE, test_indices, whole_data, PATCH_LENGTH, padded_data, INPUT_DIMENSION
     )
-    x_train = train_data.reshape(
-        train_data.shape[0], train_data.shape[1], train_data.shape[2], INPUT_DIMENSION
-    )
-    x_test_all = test_data.reshape(
-        test_data.shape[0], test_data.shape[1], test_data.shape[2], INPUT_DIMENSION
-    )
-    x_val = x_test_all[-VAL_SIZE:]
+    
+    # 分割验证集
+    x_val = test_data[-VAL_SIZE:]
     y_val = y_test[-VAL_SIZE:]
-    x_test = x_test_all[:-VAL_SIZE]
+    x_test = test_data[:-VAL_SIZE]
     y_test = y_test[:-VAL_SIZE]
-    x1_tensor_train = torch.from_numpy(x_train).type(torch.FloatTensor).unsqueeze(1)
-    y1_tensor_train = torch.from_numpy(y_train).type(torch.FloatTensor)
-    torch_dataset_train = Data.TensorDataset(x1_tensor_train, y1_tensor_train)
-    x1_tensor_valida = torch.from_numpy(x_val).type(torch.FloatTensor).unsqueeze(1)
-    y1_tensor_valida = torch.from_numpy(y_val).type(torch.FloatTensor)
-    torch_dataset_valida = Data.TensorDataset(x1_tensor_valida, y1_tensor_valida)
-    x1_tensor_test = torch.from_numpy(x_test).type(torch.FloatTensor).unsqueeze(1)
-    y1_tensor_test = torch.from_numpy(y_test).type(torch.FloatTensor)
-    torch_dataset_test = Data.TensorDataset(x1_tensor_test, y1_tensor_test)
-    all_data.reshape(
-        all_data.shape[0], all_data.shape[1], all_data.shape[2], INPUT_DIMENSION
-    )
-    all_tensor_data = torch.from_numpy(all_data).type(torch.FloatTensor).unsqueeze(1)
-    all_tensor_data_label = torch.from_numpy(gt_all).type(torch.FloatTensor)
-    torch_dataset_all = Data.TensorDataset(all_tensor_data, all_tensor_data_label)
-    train_iter = Data.DataLoader(
-        dataset=torch_dataset_train, batch_size=batch_size, shuffle=True, num_workers=0
-    )
-    valiada_iter = Data.DataLoader(
-        dataset=torch_dataset_valida, batch_size=batch_size, shuffle=True, num_workers=0
-    )
-    test_iter = Data.DataLoader(
-        dataset=torch_dataset_test, batch_size=batch_size, shuffle=False, num_workers=0
-    )
-    all_iter = Data.DataLoader(
-        dataset=torch_dataset_all, batch_size=batch_size, shuffle=False, num_workers=0
-    )
-    return train_iter, valiada_iter, test_iter, all_iter
+    
+    # 转换为 PyTorch 张量
+    x_train_tensor = torch.from_numpy(train_data).float().unsqueeze(1)
+    y_train_tensor = torch.from_numpy(y_train).long()
+    
+    x_val_tensor = torch.from_numpy(x_val).float().unsqueeze(1)
+    y_val_tensor = torch.from_numpy(y_val).long()
+    
+    x_test_tensor = torch.from_numpy(x_test).float().unsqueeze(1)
+    y_test_tensor = torch.from_numpy(y_test).long()
+    
+    all_data_tensor = torch.from_numpy(all_data).float().unsqueeze(1)
+    gt_all_tensor = torch.from_numpy(gt_all).long()
+    
+    # 创建数据集
+    train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
+    val_dataset = TensorDataset(x_val_tensor, y_val_tensor)
+    test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
+    all_dataset = TensorDataset(all_data_tensor, gt_all_tensor)
+    
+    # 创建 DataLoader
+    train_iter = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_iter = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    test_iter = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    all_iter = DataLoader(all_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    
+    return train_iter, val_iter, test_iter, all_iter
 
 
 def generate_png(all_iter, net, gt_hsi, Dataset, device, total_indices):
