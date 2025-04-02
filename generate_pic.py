@@ -33,10 +33,10 @@ def select_small_cubic(
             数组的形状为 (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension)。
     """
     rows, cols = whole_data.shape[:2]
-    small_cubic_data = np.zeros(
-        (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension),
-        dtype=padded_data.dtype,
-    )
+    # small_cubic_data = np.zeros(
+    #     (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension),
+    #     dtype=padded_data.dtype,
+    # )
 
     # 计算每个索引对应的行和列
     data_indices = np.array(data_indices)
