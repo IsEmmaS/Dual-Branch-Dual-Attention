@@ -11,12 +11,12 @@ from pathlib import Path
 from network import DBDA_network_MISH
 from train import train
 from record import record_output
-from generate_pic import (
+from process import (
     aa_and_each_accuracy,
     sampling,
     load_dataset,
     generate_png,
-    generate_iter,
+    get_dataloader,
 )
 
 PWD = Path(__file__).resolve().parent
@@ -43,14 +43,13 @@ gt = gt_hsi.reshape(np.prod(gt_hsi.shape[:2]))
 CLASSES_NUM = max(gt)
 print("The class numbers of the HSI data is:", CLASSES_NUM)
 print("Importing Setting Parameters")
-ITER = 10
+ITER = 5
 PATCH_LENGTH = 4
 lr, num_epochs, batch_size = 0.0005, 200, 16
 loss = torch.nn.CrossEntropyLoss()
 img_rows = 2 * PATCH_LENGTH + 1
 img_cols = 2 * PATCH_LENGTH + 1
 img_channels = data_hsi.shape[2]
-INPUT_DIMENSION = data_hsi.shape[2]
 ALL_SIZE = data_hsi.shape[0] * data_hsi.shape[1]
 VAL_SIZE = int(TRAIN_SIZE)
 TEST_SIZE = TOTAL_SIZE - TRAIN_SIZE
@@ -81,7 +80,7 @@ print("Test size: ", TEST_SIZE)
 VAL_SIZE = int(TRAIN_SIZE)
 print("Validation size: ", VAL_SIZE)
 print("Selecting Small Pieces from the Original Cube Data")
-train_iter, valida_iter, test_iter, all_iter = generate_iter(
+train_loader, valida_loader, test_loader, all_loader = get_dataloader(
     TRAIN_SIZE,
     train_indices,
     TEST_SIZE,
@@ -92,32 +91,31 @@ train_iter, valida_iter, test_iter, all_iter = generate_iter(
     whole_data,
     PATCH_LENGTH,
     padded_data,
-    INPUT_DIMENSION,
     batch_size,
     gt,
 )
-for index_iter in range(ITER):
+for iter in range(ITER):
     torch.cuda.empty_cache()
-    np.random.seed(seeds[index_iter])
-    print("iter:", index_iter)
+    np.random.seed(seeds[iter])
+    print("iter:", iter)
     tic1 = time.perf_counter()
     train(
         net,
-        train_iter,
-        valida_iter,
+        train_loader,
+        valida_loader,
         loss,
         optimizer,
         device,
         dataset_str,
         IMAGE_FOLDER,
-        index_iter,
+        iter,
         epochs=num_epochs,
     )
     toc1 = time.perf_counter()
     pred_test_fdssc = []
     tic2 = time.perf_counter()
     with torch.no_grad():
-        for X, y in test_iter:
+        for X, y in test_loader:
             X = X.to(device)
             net.eval()
             y_hat = net(X)
@@ -137,7 +135,7 @@ for index_iter in range(ITER):
     average_acc_list.append(average_acc_fdssc)
     TRAINING_TIME.append(toc1 - tic1)
     TESTING_TIME.append(toc2 - tic2)
-    ELEMENT_ACC[(index_iter), :] = each_acc_fdssc
+    ELEMENT_ACC[(iter), :] = each_acc_fdssc
 print(f"{net.name}  Training Finished")
 record_output(
     overall_acc_list,
@@ -149,4 +147,4 @@ record_output(
     f"{PWD}/records/log/{net.name}_{day_str}_{Dataset}"
     f"_split{VALIDATION_SPLIT}_lr{lr}.txt",
 )
-generate_png(all_iter, net, gt_hsi, Dataset, device, total_indices)
+generate_png(all_loader, net, gt_hsi, Dataset, device, total_indices)

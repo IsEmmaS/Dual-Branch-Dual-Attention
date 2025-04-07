@@ -10,7 +10,7 @@ from pathlib import Path
 PWD = Path(__file__).resolve().parent
 
 def select_small_cubic(
-    data_size, data_indices, whole_data, patch_length, padded_data, dimension
+    data_size, data_indexes, whole_data, patch_length, padded_data
 ):
     """
     根据给定的数据索引从填充后的数据中提取小立方体块。
@@ -22,26 +22,21 @@ def select_small_cubic(
 
     参数：
         data_size (int): 要提取块的数据点数量。
-        data_indices (numpy.ndarray): 数据点在原始数据中的索引。
+        data_indexes (numpy.ndarray): 数据点在原始数据中的索引。
         whole_data (numpy.ndarray): 未填充的原始数据。
         patch_length (int): 要提取的块的长度。
         padded_data (numpy.ndarray): 填充后的数据。
-        dimension (int): 数据的维度数。
 
     返回值：
         small_cubic_data (numpy.ndarray): 一个 4D 数组，包含提取的小立方体块。
             数组的形状为 (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension)。
     """
     rows, cols = whole_data.shape[:2]
-    # small_cubic_data = np.zeros(
-    #     (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension),
-    #     dtype=padded_data.dtype,
-    # )
 
     # 计算每个索引对应的行和列
-    data_indices = np.array(data_indices)
-    row_indices = (data_indices // cols).astype(int) + patch_length
-    col_indices = (data_indices % cols).astype(int) + patch_length
+    data_indexes = np.array(data_indexes)
+    row_indices = (data_indexes // cols).astype(int) + patch_length
+    col_indices = (data_indexes % cols).astype(int) + patch_length
 
     # 使用Numpy的索引网络、广播机制进行优化
     row_indices = row_indices[:, np.newaxis, np.newaxis]
@@ -283,22 +278,9 @@ def list_to_colormap(x_list):
     Raises:
         KeyError: 如果 `x_list` 中的某个整数不在 `color_map` 中，将使用默认的黑色 (0, 0, 0)。
 
-    Example:
-        >>> x_list = np.array([0, 1, 2, 3, 4])
-        >>> y = list_to_colormap(x_list)
-        >>> print(y)
-        [[1.         0.         0.        ]
-         [0.         1.         0.        ]
-         [0.         0.         1.        ]
-         [1.         1.         0.        ]
-         [1.         0.         1.        ]]
-
     Note:
         该函数假设输入的 `x_list` 是一个一维的 numpy 数组。如果输入不是 numpy 数组，可能会导致错误。
         该函数使用了默认的黑色 (0, 0, 0) 作为未定义整数的颜色，确保输出数组的完整性。
-
-    See Also:
-        numpy.array: 用于创建和操作数组。
     """
     color_map = {
         (-1): np.array([0, 0, 0]) / 255.0,
@@ -333,7 +315,7 @@ def list_to_colormap(x_list):
     return y
 
 
-def generate_iter(
+def get_dataloader(
     TRAIN_SIZE,
     train_indices,
     TEST_SIZE,
@@ -344,7 +326,6 @@ def generate_iter(
     whole_data,
     PATCH_LENGTH,
     padded_data,
-    INPUT_DIMENSION,
     batch_size,
     gt,
 ):
@@ -363,7 +344,6 @@ def generate_iter(
         whole_data (numpy.ndarray): 整个数据集的原始数据。
         PATCH_LENGTH (int): 每个样本的邻域大小。
         padded_data (numpy.ndarray): 填充后的数据。
-        INPUT_DIMENSION (int): 输入数据的维度。
         batch_size (int): 每个批次的大小。
         gt (numpy.ndarray): 地面真值（标签）。
 
@@ -385,7 +365,6 @@ def generate_iter(
         whole_data,
         PATCH_LENGTH,
         padded_data,
-        INPUT_DIMENSION,
     )
 
     # 根据索引分割数据
@@ -395,10 +374,9 @@ def generate_iter(
         whole_data,
         PATCH_LENGTH,
         padded_data,
-        INPUT_DIMENSION,
     )
     test_data = select_small_cubic(
-        TEST_SIZE, test_indices, whole_data, PATCH_LENGTH, padded_data, INPUT_DIMENSION
+        TEST_SIZE, test_indices, whole_data, PATCH_LENGTH, padded_data
     )
     
     # 分割验证集
@@ -437,7 +415,7 @@ def generate_iter(
 
 def generate_png(all_iter, net, gt_hsi, Dataset, device, total_indices):
     pred_test = []
-    for X, y in all_iter:
+    for X, _ in all_iter:
         X = X.to(device)
         net.eval()
         pred_test.extend(np.array(net(X).cpu().argmax(axis=1)))
