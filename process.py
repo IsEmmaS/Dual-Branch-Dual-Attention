@@ -9,46 +9,73 @@ from pathlib import Path
 
 PWD = Path(__file__).resolve().parent
 
-def select_small_cubic(
-    data_size, data_indexes, whole_data, patch_length, padded_data
-):
+import numpy as np
+
+def select_small_cubic(data_size, data_indices, whole_data, patch_length, padded_data, dimension):
     """
-    根据给定的数据索引从填充后的数据中提取小立方体块。
+    从填充后的数据中提取以指定索引为中心的小立方体。
 
-    该函数接收数据大小、数据索引、原始数据、块长度、填充后的数据和数据维度作为输入。
-    首先，它将数据索引分配到填充后数据中对应的行和列位置。
-    然后，它遍历每个数据索引，使用切片操作提取以分配位置为中心的小立方体块，
-    并将这些块存储在 small_cubic_data 数组中。
+    参数:
+        data_size (int): 需要提取的小立方体的数量。
+        data_indices (list or numpy.ndarray): 指定的索引数组。
+        whole_data (numpy.ndarray): 原始数据矩阵。
+        patch_length (int): 小立方体的扩展长度。
+        padded_data (numpy.ndarray): 填充后的数据矩阵。
+        dimension (int): 数据的维度。
 
-    参数：
-        data_size (int): 要提取块的数据点数量。
-        data_indexes (numpy.ndarray): 数据点在原始数据中的索引。
-        whole_data (numpy.ndarray): 未填充的原始数据。
-        patch_length (int): 要提取的块的长度。
-        padded_data (numpy.ndarray): 填充后的数据。
-
-    返回值：
-        small_cubic_data (numpy.ndarray): 一个 4D 数组，包含提取的小立方体块。
-            数组的形状为 (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension)。
+    返回:
+        numpy.ndarray: 提取的小立方体数据，形状为 (data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension)。
     """
-    rows, cols = whole_data.shape[:2]
-
-    # 计算每个索引对应的行和列
-    data_indexes = np.array(data_indexes)
-    row_indices = (data_indexes // cols).astype(int) + patch_length
-    col_indices = (data_indexes % cols).astype(int) + patch_length
-
-    # 使用Numpy的索引网络、广播机制进行优化
-    row_indices = row_indices[:, np.newaxis, np.newaxis]
-    col_indices = col_indices[:, np.newaxis, np.newaxis]
-    row_range = np.arange(-patch_length, patch_length + 1)
-    col_range = np.arange(-patch_length, patch_length + 1)
-    row_grid = row_indices + row_range
-    col_grid = col_indices + col_range
-    small_cubic_data = padded_data[row_grid, col_grid, :]
-
+    data_assign = index_assignment(data_indices, whole_data.shape[0], whole_data.shape[1], patch_length)
+    
+    # 初始化小立方体数据
+    small_cubic_data = np.zeros((data_size, 2 * patch_length + 1, 2 * patch_length + 1, dimension))
+    
+    # 提取小立方体
+    for i in range(len(data_assign)):
+        row, col = data_assign[i]
+        small_cubic_data[i] = padded_data[row - patch_length:row + patch_length + 1,
+                                           col - patch_length:col + patch_length + 1,
+                                           :]
+    
     return small_cubic_data
 
+
+def select_patch(matrix:np.ndarray, pos_row:int, pos_col:int, ex_len:int)->np.ndarray:
+    """
+    从矩阵中提取以指定位置为中心的子块,patch。
+
+    参数:
+        matrix (numpy.ndarray): 输入矩阵，这里是2D的。
+        pos_row (int): 子块中心的行位置。
+        pos_col (int): 子块中心的列位置。
+        ex_len (int): 扩展长度，即子块的半边长。
+
+    返回:
+        numpy.ndarray: 提取的子块。
+    """
+    rows = np.arange(pos_row - ex_len, pos_row + ex_len + 1)
+    cols = np.arange(pos_col - ex_len, pos_col + ex_len + 1)
+    selected_patch = matrix[np.ix_(rows, cols)]
+    return selected_patch
+
+def index_assignment(index:np.ndarray, row:int, col:int, pad_length:int)->dict:
+    """将1D索引替换为2D索引
+
+    参数:
+        index (np.ndarray): 需要替换的1D索引
+        row (int): 矩阵行数
+        col (int): 矩阵列数，这里两者是一样的一般
+        pad_length (int): 填充长度
+
+    返回:
+        dict: 映射之后的二维字典，{键:值}-->{原索引:[行索引+填充长度，列索引]}
+    """
+    new_assign = {}
+    assign_0 = index // col + pad_length
+    assign_1 = index % col + pad_length
+    new_assign = {i:[assign_0[i], assign_1[i]] for i in range(len(index))}
+    return new_assign
 
 
 
